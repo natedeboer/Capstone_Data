@@ -1,46 +1,37 @@
-# import the necessary packages
+#Run code with: $python3 motion_measurement.py -v [video_name]
+
 from imutils.video import VideoStream
 import argparse
 import datetime
 import imutils
 import time
 import cv2
-# construct the argument parser and parse the arguments
+
 ap = argparse.ArgumentParser()
 ap.add_argument("-v", "--video", help="path to the video file")
 ap.add_argument("-a", "--min-area", type=int, default=500, help="minimum area size")
 args = vars(ap.parse_args())
 cursurface = 0
-# if the video argument is None, then we are reading from webcam
-if args.get("video", None) is None:
-	vs = VideoStream(src=0).start()
-	time.sleep(2.0)
-# otherwise, we are reading from a video file
-else:
-	vs = cv2.VideoCapture(args["video"])
-# initialize the first frame in the video stream
+vs = cv2.VideoCapture(args["video"])
+
 firstFrame = None
-# loop over the frames of the video
+
 j = 0
 numFrames = 0;
 avg = 0
 while True:
 	numFrames += 1
 	j = j+1
-	# grab the current frame and initialize the occupied/unoccupied
-	# text
 	frame = vs.read()
 	frame = frame if args.get("video", None) is None else frame[1]
 	text = "Unoccupied"
-	# if the frame could not be grabbed, then we have reached the end
-	# of the video
 	if frame is None:
 		break
-	# resize the frame, convert it to grayscale, and blur it
+
 	frame = imutils.resize(frame, width=500)
 	gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 	gray = cv2.GaussianBlur(gray, (21, 21), 0)
-	# if the first frame is None, initialize it
+
 	if j == 15:
 		firstFrame = gray
 		j = 0
@@ -48,17 +39,15 @@ while True:
 	if firstFrame is None:
 		firstFrame = gray
 		continue
-		# compute the absolute difference between the current frame and
-	# first frame
+
 	frameDelta = cv2.absdiff(firstFrame, gray)
 	thresh = cv2.threshold(frameDelta, 25, 255, cv2.THRESH_BINARY)[1]
-	# dilate the thresholded image to fill in holes, then find contours
-	# on thresholded image
+
 	thresh = cv2.dilate(thresh, None, iterations=2)
 	cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
 		cv2.CHAIN_APPROX_SIMPLE)
 	cnts = imutils.grab_contours(cnts)
-	# loop over the contours
+
 	surface = 500 * 372
 	for c in cnts:
 		cursurface += cv2.contourArea(c)
@@ -67,10 +56,10 @@ while True:
 	cv2.imshow("Thresh", thresh)
 	cv2.imshow("Frame Delta", frameDelta)
 	key = cv2.waitKey(1) & 0xFF
-	# if the `q` key is pressed, break from the lop
+
 	if key == ord("q"):
 		break
-# cleanup the camera and close any open windows
+
 print("Total Movement: ",avg)
 avg = avg / numFrames
 print("Average Movement per Frame: ",avg)
